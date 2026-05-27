@@ -1,13 +1,18 @@
-from dataclasses import dataclass , field
-from typing import Set, Optional
+from sqlmodel import SQLModel , Field
+from typing import Optional
 from datetime import datetime , date
-@dataclass
-class Habit:
-    habit_id : str
-    habit : str
+
+class Habit(SQLModel, table=True):
+    habit_id : str = Field(primary_key= True)
+    habit : str = Field(index = True)
     category : str
     created_at : datetime
-    completed_days: Set[date] = field(default_factory=set)
-    updated_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = Field(default=None)
+
+class HabitCompletion(SQLModel , table = True):
+    id: int | None = Field(default=None, primary_key=True)
+    habit_id: str = Field(foreign_key="habit.habit_id") 
+    completed_date : date 
+
 
         
