@@ -16,7 +16,7 @@ class HabitCompletion(SQLModel , table = True):
 
 
 class UserModel(SQLModel , table = True):
-    user_id : int | None = Field(default= None ,primary_key=True)
+    user_id : str | None = Field(default= None ,primary_key=True)
     username : str = Field(unique=True , index = True)
     email : str  = Field(unique=True , index = True)
     hashed_password : str 
