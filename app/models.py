@@ -15,4 +15,12 @@ class HabitCompletion(SQLModel , table = True):
     completed_date : date 
 
 
+class UserModel(SQLModel , table = True):
+    user_id : int | None = Field(default= None ,primary_key=True)
+    username : str = Field(unique=True , index = True)
+    email : str  = Field(unique=True , index = True)
+    hashed_password : str 
+    created_at : datetime = Field(default_factory=datetime.now)
+
+
         
