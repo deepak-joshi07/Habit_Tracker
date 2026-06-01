@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException , Depends
 from .service import HabitTracker
-from pydantic import BaseModel
+from pydantic import BaseModel , EmailStr
 from .db import create_db_and_tables , get_session
 from contextlib import asynccontextmanager
 from sqlmodel import Session
+from .security import create_user , verify_password
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
@@ -23,6 +24,15 @@ class HabitCreated(BaseModel):
 class HabitEdit(BaseModel):
     new_habit: str | None = None
     new_category: str | None = None
+
+class CreateUser(BaseModel):
+    username : str
+    email : EmailStr
+    password : str
+
+class LoginUser(BaseModel):
+    email: EmailStr
+    password: str
 
 
 @app.get("/habits")
@@ -147,3 +157,31 @@ def delete_habit(habit_id: str , session: Session = Depends(get_session)):
             status_code=404,
             detail=str(e)
         )
+    
+
+@app.post("/signup")
+def signup(data: CreateUser,session: Session = Depends(get_session)):
+    try: 
+        user = create_user(username = data.username , email = data.email , password = data.password , session=session )
+        return user
+    except ValueError as e:
+        raise HTTPException(
+            status_code= 409,
+            detail= str(e)
+        )
+    
+@app.post("/login")
+def login(data: LoginUser ,  session: Session = Depends(get_session)):
+    valid = verify_password(email= data.email , password= data.password , session = session )
+
+    if not valid:
+        raise HTTPException(
+            status_code= 401, 
+            detail= "Invalid email or password"
+        )
+
+    return  {
+        "status" : "Login sucessful"
+    }
+    
+    
