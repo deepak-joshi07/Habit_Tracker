@@ -1,10 +1,13 @@
-from fastapi import FastAPI, HTTPException , Depends
+from fastapi import FastAPI, HTTPException , Depends 
 from .service import HabitTracker
 from pydantic import BaseModel , EmailStr
 from .db import create_db_and_tables , get_session
 from contextlib import asynccontextmanager
-from sqlmodel import Session
-from .security import create_user , verify_password
+from sqlmodel import Session 
+from .security import create_user
+from .auth import authenticate_user , create_access_token , get_current_user
+from .models import UserModel
+
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
@@ -36,13 +39,13 @@ class LoginUser(BaseModel):
 
 
 @app.get("/habits")
-def get_habits(session: Session = Depends(get_session)):
+def get_habits(current_user: UserModel = Depends(get_current_user),session: Session = Depends(get_session)):
+
     return habits.get_all_habits(session)
 
 
 @app.post("/habits")
-def create_habit(data: HabitCreated , 
-                 session: Session = Depends(get_session)
+def create_habit(data: HabitCreated ,current_user: UserModel = Depends(get_current_user), session: Session = Depends(get_session)
                  ):
 
     try:
@@ -63,7 +66,7 @@ def create_habit(data: HabitCreated ,
 
 
 @app.patch("/habits/{habit_id}/complete")
-def mark_habit_done(habit_id: str , session: Session = Depends(get_session)):
+def mark_habit_done(habit_id: str ,current_user: UserModel = Depends(get_current_user), session: Session = Depends(get_session)):
     try:
         updated_habit = habits.mark_habit_done(habit_id , session = session)
 
@@ -84,7 +87,7 @@ def mark_habit_done(habit_id: str , session: Session = Depends(get_session)):
 
 
 @app.get("/habits/{habit_id}/streak")
-def get_current_streak(habit_id: str , session: Session = Depends(get_session)):
+def get_current_streak(habit_id: str ,current_user: UserModel = Depends(get_current_user), session: Session = Depends(get_session)):
 
     try:
         current_streak = habits.get_current_streak(habit_id , session)
@@ -102,7 +105,7 @@ def get_current_streak(habit_id: str , session: Session = Depends(get_session)):
 
 
 @app.get("/habits/{habit_id}/max-streak")
-def get_max_streak(habit_id: str , session: Session = Depends(get_session)):
+def get_max_streak(habit_id: str ,current_user: UserModel = Depends(get_current_user), session: Session = Depends(get_session)):
     try:
         max_streak = habits.get_max_streak(habit_id , session)
 
@@ -119,7 +122,7 @@ def get_max_streak(habit_id: str , session: Session = Depends(get_session)):
 
 
 @app.patch("/habits/{habit_id}")
-def edit_habit(habit_id: str, data: HabitEdit , session: Session = Depends(get_session)):
+def edit_habit(habit_id: str, data: HabitEdit ,current_user: UserModel = Depends(get_current_user), session: Session = Depends(get_session)):
     try:
         edited_habit = habits.edit_habit(
             habit_id,
@@ -145,7 +148,7 @@ def edit_habit(habit_id: str, data: HabitEdit , session: Session = Depends(get_s
 
 
 @app.delete("/habits/{habit_id}")
-def delete_habit(habit_id: str , session: Session = Depends(get_session)):
+def delete_habit(habit_id: str ,current_user: UserModel = Depends(get_current_user), session: Session = Depends(get_session)):
     try:
         deleted_habit = habits.delete_habit(habit_id , session= session)
 
@@ -172,7 +175,7 @@ def signup(data: CreateUser,session: Session = Depends(get_session)):
     
 @app.post("/login")
 def login(data: LoginUser ,  session: Session = Depends(get_session)):
-    valid = verify_password(email= data.email , password= data.password , session = session )
+    valid = authenticate_user(password=data.password , email = data.email , session = session)
 
     if not valid:
         raise HTTPException(
@@ -180,8 +183,14 @@ def login(data: LoginUser ,  session: Session = Depends(get_session)):
             detail= "Invalid email or password"
         )
 
-    return  {
-        "status" : "Login sucessful"
+    access_token = create_access_token(
+        data = {
+            "sub" : valid.email 
+        }
+    )
+    
+    return {
+        "access_token" : access_token,
+        "token_type" : "bearer"
     }
-    
-    
+

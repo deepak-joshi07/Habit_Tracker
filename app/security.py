@@ -2,8 +2,8 @@ import uuid
 from passlib.hash import pbkdf2_sha256
 from passlib.utils import saslprep
 from .models import UserModel
-from datetime import datetime
 from sqlmodel import select 
+
 
 
 def hash_password(password):
@@ -41,16 +41,8 @@ def create_user(username , email , password, session ):
     return user
 
 
-def verify_password(password ,email, session):
-    details = session.exec(
-        select(UserModel)
-        .where(UserModel.email == email)
-        ).first()
-    if not details:
-        return False
-    passw = details.hashed_password
-    normalised = saslprep(password)
-    return pbkdf2_sha256.verify(normalised , passw)
+def verify_password(password ,hashed_password):
+    return pbkdf2_sha256.verify(saslprep(password) , hashed_password)
 
     
         
