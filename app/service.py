@@ -120,7 +120,7 @@ class HabitTracker:
 
         return max_streak
 
-    def edit_habit(self, habit_id, new_habit=None, new_category=None , session: Session = None):
+    def edit_habit(self, habit_id, new_habit=None, new_category=None , session = None):
         habit = self._get_habit(habit_id , session)
 
         
