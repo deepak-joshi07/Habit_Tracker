@@ -7,6 +7,7 @@ from sqlmodel import Session
 from .security import create_user
 from .auth import authenticate_user , create_access_token , get_current_user
 from .models import UserModel
+from fastapi.security import OAuth2PasswordRequestForm
 
 
 @asynccontextmanager
@@ -174,23 +175,38 @@ def signup(data: CreateUser,session: Session = Depends(get_session)):
         )
     
 @app.post("/login")
-def login(data: LoginUser ,  session: Session = Depends(get_session)):
-    valid = authenticate_user(password=data.password , email = data.email , session = session)
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Session = Depends(get_session)
+):
+    valid = authenticate_user(
+        password=form_data.password,
+        email=form_data.username,
+        session=session
+    )
 
     if not valid:
         raise HTTPException(
-            status_code= 401, 
-            detail= "Invalid email or password"
+            status_code=401,
+            detail="Invalid email or password"
         )
 
     access_token = create_access_token(
-        data = {
-            "sub" : valid.email 
+        data={
+            "sub": valid.email
         }
     )
-    
+
     return {
-        "access_token" : access_token,
-        "token_type" : "bearer"
+        "access_token": access_token,
+        "token_type": "bearer"
     }
 
+
+@app.get("/me")
+def me(current_user: UserModel = Depends(get_current_user)):
+    return {
+        "user_id": current_user.user_id,
+        "email": current_user.email,
+        "username": current_user.username
+    }
